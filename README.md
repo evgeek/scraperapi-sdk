@@ -27,7 +27,9 @@ $sdk = new Client('YOU_TOKEN');
 //Setup ScraperAPI parameters according to the documentation
 $sdk
     ->setCountryCode('us')
-    ->setDeviceType('desktop');
+    ->setDeviceType('desktop')
+    ->setKeepHeaders(true)
+    ->addHeader('Accept', 'application/json');
 
 //Send request
 $response = $sdk->get('https://example.com');
@@ -54,7 +56,9 @@ The client is configured through the constructor parameters:
   debug messages will be sent to the ```DEBUG``` level.
 * ```$maxExceptionsLength``` (default ```120```) - maximum length of Guzzle exceptions messages.
 
-## Configure default API parameters
+## Configure default SDK Client parameters
+
+### API parameters
 
 Configuring default API functionality according to [ScraperAPI documentation](https://www.scraperapi.com/documentation/)
 . The default settings apply to all requests, unless they are overridden at the request level. All parameters are set
@@ -86,6 +90,29 @@ $sdk->setParams([
 ]);
 ```
 
+### Headers
+
+You can add default headers by ```addHeader()``` method. Don't forget to enable ```keep_headers``` to allow your headers
+to be used!
+
+```php
+$sdk
+    ->setKeepHeaders(true)
+    ->addHeader('Referer', 'https://example.com/')
+    ->addHeader('Accept', 'application/json');
+```
+
+Or set headers in one step by ```setHeaders()``` method. This method erases all previously set headers.
+
+```php
+$sdk
+    ->setKeepHeaders(true)
+    ->setHeaders([
+        'Referer' => 'https://example.com/',
+        'Accept' => 'application/json',
+    ]);
+```
+
 ## Requests
 
 SDK supports ```GET```, ```POST``` and ```PUT``` HTTP methods. Standard parameters of each request methods:
@@ -93,6 +120,8 @@ SDK supports ```GET```, ```POST``` and ```PUT``` HTTP methods. Standard paramete
 1. ```$url``` (required) - url of scrapped resource.
 2. ```$apiParams``` (default ```null```) - to set the API settings for the request. They will override the defaults set
    in the SDK Client object (only those that overlap).
+3. ```$headers``` (default ```null```) - to set headers for the request. Just like ```$apiParams```, they will override
+   the defaults set in the SDK Client object (only those that overlap).
 
 ### Synchronous
 
@@ -101,7 +130,14 @@ SDK supports ```GET```, ```POST``` and ```PUT``` HTTP methods. Standard paramete
 Pretty simple:
 
 ```php
-$response = $sdk->get('https://example.com', ['country_code' => 'us']);
+$response = $sdk->get(
+    'https://example.com', 
+    ['keep_headers' => true], 
+    [
+        'Referer' => 'https://example.com/',
+        'Accept' => 'application/json',
+    ]
+);
 $content = $response->getBody()->getContents();
 ```
 
@@ -110,7 +146,7 @@ $content = $response->getBody()->getContents();
 A bit more complicated:
 
 ```php
-$response = $sdk->post('https://example.com', $apiParams, $body, $formParams, $json);
+$response = $sdk->post('https://example.com', $apiParams, $headers, $body, $formParams, $json);
 $content = $response->getBody()->getContents();
 ```
 
@@ -134,10 +170,9 @@ $query = '
       }
     }
 ';
-$variables = ['episode' => 'JEDI'];
-$formParams = ['query' => $query, 'variables' => $variables];
+$formParams = ['query' => $query, 'variables' => ['episode' => 'JEDI']];
 
-$response = $sdk->post('https://example.com', null, null, $formParams);
+$response = $sdk->post('https://example.com', null, null, null, $formParams);
 ```
 
 ### Asynchronous
@@ -147,8 +182,8 @@ Everything is similar to synchronous, but the work is going not through requests
 ```php
 //Create array with promises
 $promises = [
-    'first' => $sdk->getPromise('https://example.com', ['country_code' => 'us']),
-    'second' => $sdk->postPromise('https://example.com', null, 'payload'),
+    'first' => $sdk->getPromise('https://example.com', ['keep_headers' => true], ['Accept' => 'application/json']),
+    'second' => $sdk->postPromise('https://example.com', null, null, 'payload'),
 ];
 //Asynchronous fulfillment of promises
 $responses = $sdk->resolvePromises($promises);

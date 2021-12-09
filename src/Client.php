@@ -83,10 +83,16 @@ class Client
     private $logLevel;
 
     /**
-     * ScraperAPI request params
+     * ScraperAPI default request params
      * @var array
      */
     private $params = [];
+
+    /**
+     * Default headers
+     * @var array
+     */
+    private $headers = [];
 
     /**
      * Total promises in a bunch (for debug statements)
@@ -98,6 +104,9 @@ class Client
      * @var int
      */
     private $fulfilledPromises = 0;
+
+    /** @var array */
+    private $paramsList;
 
     /**
      * ScraperAPI documentation - https://www.scraperapi.com/documentation/
@@ -129,6 +138,8 @@ class Client
         $this->showApiKey = $showApiKey;
         $this->logger = $logger;
         $this->logLevel = $logLevel;
+
+        $this->paramsList = array_flip(static::PARAMS_LIST);
 
         $handlerStack = HandlerStack::create();
         $handlerStack->push(Middleware::retry(
@@ -170,7 +181,7 @@ class Client
 
 
     /**
-     * Caller for ScraperAPI query params setters
+     * Caller for Client default query params setters
      *
      * @param string $name
      * @param array $arguments
@@ -195,7 +206,7 @@ class Client
     private function setter(string $name, array $arguments): void
     {
         $paramName = $this->parseParamName($name);
-        if (array_key_exists($paramName, array_flip(static::PARAMS_LIST))) {
+        if (array_key_exists($paramName, $this->paramsList)) {
             $this->setParam($paramName, $arguments);
         }
     }
@@ -237,7 +248,7 @@ class Client
     }
 
     /**
-     * Set ScraperAPI query params in one step from array
+     * Set Client default query params in one step from array, replacing existing ones
      *
      * @param array $params
      * @return Client
@@ -245,6 +256,29 @@ class Client
     public function setParams(array $params): Client
     {
         $this->params = $params;
+        return $this;
+    }
+
+    /**
+     * Add default header to Client
+     * @param string $header
+     * @param array|string $value
+     * @return $this
+     */
+    public function addHeader(string $header, $value): Client
+    {
+        $this->headers[$header] = $value;
+        return $this;
+    }
+
+    /**
+     * Set default Client headers in one step from array, replacing existing ones
+     * @param array $headers
+     * @return $this
+     */
+    public function setHeaders(array $headers): Client
+    {
+        $this->headers = $headers;
         return $this;
     }
 
@@ -270,12 +304,13 @@ class Client
      *
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @return ResponseInterface
      * @throws GuzzleException
      */
-    public function get(string $url, ?array $apiParams = null): ResponseInterface
+    public function get(string $url, ?array $apiParams = null, ?array $headers = null): ResponseInterface
     {
-        return $this->sendRequest('GET', $url, $apiParams);
+        return $this->sendRequest('GET', $url, $apiParams, $headers);
     }
 
     /**
@@ -283,6 +318,7 @@ class Client
      *
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @param mixed|null $body
      * @param array|null $formParams
      * @param array|null $json
@@ -292,20 +328,22 @@ class Client
     public function post(
         string $url,
         ?array $apiParams = null,
+        ?array $headers = null,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
     ): ResponseInterface
     {
-        return $this->sendRequest('POST', $url, $apiParams, $body, $formParams, $json);
+        return $this->sendRequest('POST', $url, $apiParams, $headers, $body, $formParams, $json);
     }
 
     /**
      * PUT request
      *
      * @param string $url
-     * @param mixed|null $body
      * @param array|null $apiParams
+     * @param array|null $headers
+     * @param mixed|null $body
      * @param array|null $formParams
      * @param array|null $json
      * @return ResponseInterface
@@ -314,12 +352,13 @@ class Client
     public function put(
         string $url,
         ?array $apiParams = null,
+        ?array $headers = null,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
     ): ResponseInterface
     {
-        return $this->sendRequest('PUT', $url, $apiParams, $body, $formParams, $json);
+        return $this->sendRequest('PUT', $url, $apiParams, $headers, $body, $formParams, $json);
     }
 
 
@@ -327,6 +366,7 @@ class Client
      * @param string $method
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @param null $body
      * @param array|null $formParams
      * @param array|null $json
@@ -337,6 +377,7 @@ class Client
         string $method,
         string $url,
         ?array $apiParams,
+        ?array $headers,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
@@ -349,7 +390,7 @@ class Client
         $response = $this->guzzle->request(
             $method,
             $url,
-            $this->prepareQueryParams($url, $apiParams, $body, $formParams, $json)
+            $this->prepareQueryParams($url, $apiParams, $headers, $body, $formParams, $json)
         );
         $this->sendRuntime($startTime);
 
@@ -358,13 +399,21 @@ class Client
 
     /**
      * @param string $url
-     * @param $body
      * @param array|null $apiParams
+     * @param array|null $headers
+     * @param $body
      * @param array|null $formParams
      * @param array|null $json
      * @return array[]
      */
-    private function prepareQueryParams(string $url, ?array $apiParams, $body, ?array $formParams, ?array $json): array
+    private function prepareQueryParams(
+        string $url,
+        ?array $apiParams,
+        ?array $headers,
+               $body,
+        ?array $formParams,
+        ?array $json
+    ): array
     {
         $params = $this->params;
         if (is_array($apiParams)) {
@@ -372,10 +421,21 @@ class Client
                 $params[$param] = $value;
             }
         }
+
+        $resultHeaders = $this->headers;
+        if (is_array($headers)) {
+            foreach ($headers as $param => $value) {
+                $resultHeaders[$param] = $value;
+            }
+        }
+
         $params['api_key'] = $this->apiKey;
         $params['url'] = $url;
 
-        $queryParams = ['query' => $params];
+        $queryParams = [
+            'query' => $params,
+            'headers' => $resultHeaders,
+        ];
         $queryParams['on_stats'] = function (TransferStats $stats) {
             $time = $stats->getTransferTime() . 's';
             $method = $stats->getRequest()->getMethod();
@@ -397,11 +457,12 @@ class Client
      *
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @return PromiseInterface
      */
-    public function getPromise(string $url, ?array $apiParams = null): PromiseInterface
+    public function getPromise(string $url, ?array $apiParams = null, ?array $headers = null): PromiseInterface
     {
-        return $this->createPromise('GET', $url, $apiParams);
+        return $this->createPromise('GET', $url, $apiParams, $headers);
     }
 
     /**
@@ -409,6 +470,7 @@ class Client
      *
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @param mixed|null $body
      * @param array|null $formParams
      * @param array|null $json
@@ -417,12 +479,13 @@ class Client
     public function postPromise(
         string $url,
         ?array $apiParams = null,
+        ?array $headers = null,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
     ): PromiseInterface
     {
-        return $this->createPromise('POST', $url, $apiParams, $body, $formParams, $json);
+        return $this->createPromise('POST', $url, $apiParams, $headers, $body, $formParams, $json);
     }
 
     /**
@@ -430,6 +493,7 @@ class Client
      *
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @param mixed|null $body
      * @param array|null $formParams
      * @param array|null $json
@@ -438,18 +502,20 @@ class Client
     public function putPromise(
         string $url,
         ?array $apiParams = null,
+        ?array $headers = null,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
     ): PromiseInterface
     {
-        return $this->createPromise('PUT', $url, $apiParams, $body, $formParams, $json);
+        return $this->createPromise('PUT', $url, $apiParams, $headers, $body, $formParams, $json);
     }
 
     /**
      * @param string $method
      * @param string $url
      * @param array|null $apiParams
+     * @param array|null $headers
      * @param null $body
      * @param array|null $formParams
      * @param array|null $json
@@ -459,6 +525,7 @@ class Client
         string $method,
         string $url,
         ?array $apiParams,
+        ?array $headers,
                $body = null,
         ?array $formParams = null,
         ?array $json = null
@@ -467,7 +534,7 @@ class Client
         return $this->guzzle->requestAsync(
             $method,
             '',
-            $this->prepareQueryParams($url, $apiParams, $body, $formParams, $json)
+            $this->prepareQueryParams($url, $apiParams, $headers, $body, $formParams, $json)
         );
     }
 
