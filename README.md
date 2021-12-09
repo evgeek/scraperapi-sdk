@@ -182,7 +182,7 @@ Everything is similar to synchronous, but the work is going not through requests
 ```php
 //Create array with promises
 $promises = [
-    'first' => $sdk->getPromise('https://example.com', ['keep_headers' => true], ['Accept' => 'application/json']),
+    'first' => $sdk->getPromise('https://example.com', ['country_code' => 'us']),
     'second' => $sdk->postPromise('https://example.com', null, null, 'payload'),
 ];
 //Asynchronous fulfillment of promises
