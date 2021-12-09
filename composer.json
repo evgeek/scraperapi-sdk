@@ -1,7 +1,11 @@
 {
   "name": "evgeek/scraperapi-sdk",
   "description": "SDK for scraperapi.com",
-  "keywords": ["scraperapi", "scrapper", "scrapping"],
+  "keywords": [
+    "scraperapi",
+    "scrapper",
+    "scrapping"
+  ],
   "homepage": "https://github.com/evgeek/scraperapi-sdk",
   "type": "library",
   "license": "MIT",
