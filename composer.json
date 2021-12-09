@@ -1,0 +1,34 @@
+{
+  "name": "evgeek/scraperapi-sdk",
+  "description": "SDK for scraperapi.com",
+  "keywords": ["scraperapi", "scrapper", "scrapping"],
+  "homepage": "https://github.com/evgeek/scraperapi-sdk",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Eugene Ivanov",
+      "email": "evgeeek@gmail.com",
+      "homepage": "https://github.com/evgeek"
+    }
+  ],
+  "require": {
+    "php": ">=7.2",
+    "psr/log": "3.0.*",
+    "guzzlehttp/guzzle": "7.4.*",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true
+  },
+  "autoload": {
+    "psr-4": {
+      "Evgeek\\Scraperapi\\": "src"
+    }
+  }
+}
