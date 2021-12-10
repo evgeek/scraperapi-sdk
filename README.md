@@ -24,13 +24,6 @@ require '/path/to/you/vendor/autoload.php';
 //Create and configure a new SDK client
 $sdk = new Client('YOU_TOKEN');
 
-//Setup ScraperAPI parameters according to the documentation
-$sdk
-    ->setCountryCode('us')
-    ->setDeviceType('desktop')
-    ->setKeepHeaders(true)
-    ->addHeader('Accept', 'application/json');
-
 //Send request
 $response = $sdk->get('https://example.com');
 
@@ -43,6 +36,8 @@ echo $response->getBody()->getContents();
 The client is configured through the constructor parameters:
 
 * ```$apiKey``` (required) - your API key from [ScraperAPI dashboard](https://dashboard.scraperapi.com/dashboard).
+* ```$defaultApiParams``` - default API parameters for requests
+* ```$defaultHeaders``` - default HTTP headers
 * ```$timeout``` (default ```60```) - request timeout.
 * ```$tries```  (default ```3```) - number of request attempts.
 * ```$delayMultiplier```  (default ```1```) - delay multiplier before new request attempt in seconds. Multiplier 3 means
@@ -61,56 +56,33 @@ The client is configured through the constructor parameters:
 ### API parameters
 
 Configuring default API functionality according to [ScraperAPI documentation](https://www.scraperapi.com/documentation/)
-. The default settings apply to all requests, unless they are overridden at the request level. All parameters are set
-using fluent setters:
+. The default settings apply to all requests, unless they are overridden at the request level. You can set the default
+options only from constructor (SDK client is immutable), using the second parameter:
 
 ```php
-$sdk
-    ->setCountryCode('us') //activate country geotargetting
-    ->setRender(true) //activate javascript rendering
-    ->setPremium(false) //activate premium residential and mobile IPs
-    ->setSessionNumber(123) //reuse the same proxy
-    ->setKeepHeaders(true) //use your own custom headers
-    ->setDeviceType('mobile') //set mobile or desktop user agents
-    ->setAutoparse(false); //activate auto parsing for select websites
-```
-
-Or you can set all parameters in single ```setParams()``` method using an array. This method erases all previously set
-parameters.
-
-```php
-$sdk->setParams([
-    'country_code' => 'us',
-    'render' => true,
-    'premium' => false,
-    'session_number' => 123,
-    'keep_headers' => true,
-    'device_type' => 'mobile',
-    'autoparse' => 'false',
-]);
+$defaultApiParams = [
+    'country_code' => 'us', //activate country geotargetting
+    'render' => true, //activate javascript rendering
+    'premium' => false, //activate premium residential and mobile IPs
+    'session_number' => 123, //reuse the same proxy
+    'keep_headers' => true, //use your own custom headers
+    'device_type' => 'mobile', //set mobile or desktop user agents
+    'autoparse' => 'false', //activate auto parsing for select websites
+];
+$sdk = new Client('YOU_TOKEN', $defaultApiParams);
 ```
 
 ### Headers
 
-You can add default headers by ```addHeader()``` method. Don't forget to enable ```keep_headers``` to allow your headers
-to be used!
+You can add default headers with the third parameter of the constructor. Don't forget to enable ```keep_headers``` to
+allow your headers to be used!
 
 ```php
-$sdk
-    ->setKeepHeaders(true)
-    ->addHeader('Referer', 'https://example.com/')
-    ->addHeader('Accept', 'application/json');
-```
-
-Or set headers in one step by ```setHeaders()``` method. This method erases all previously set headers.
-
-```php
-$sdk
-    ->setKeepHeaders(true)
-    ->setHeaders([
-        'Referer' => 'https://example.com/',
-        'Accept' => 'application/json',
-    ]);
+$defaultHeaders = [
+    'Referer' => 'https://example.com/',
+    'Accept' => 'application/json',
+];
+$sdk = new Client('YOU_TOKEN', ['keep_headers' => true], $defaultHeaders);
 ```
 
 ## Requests
@@ -118,10 +90,10 @@ $sdk
 SDK supports ```GET```, ```POST``` and ```PUT``` HTTP methods. Standard parameters of each request methods:
 
 1. ```$url``` (required) - url of scrapped resource.
-2. ```$apiParams``` (default ```null```) - to set the API settings for the request. They will override the defaults set
-   in the SDK Client object (only those that overlap).
+2. ```$apiParams``` (default ```null```) - to set the API settings for the request. They will override the defaults from
+   the SDK Client (only those that overlap).
 3. ```$headers``` (default ```null```) - to set headers for the request. Just like ```$apiParams```, they will override
-   the defaults set in the SDK Client object (only those that overlap).
+   the defaults from the SDK Client (only those that overlap).
 
 ### Synchronous
 

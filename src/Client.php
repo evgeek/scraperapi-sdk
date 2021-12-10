@@ -18,14 +18,6 @@ use Throwable;
 
 /**
  * ScraperAPI documentation - https://www.scraperapi.com/documentation/
- *
- * @method Client setCountryCode($value) Activate country geotargetting ('us' for example)
- * @method Client setRender($value) Activate javascript rendering (true/false)
- * @method Client setPremium($value) Activate premium residential and mobile IPs (true/false)
- * @method Client setSessionNumber($value) Reuse the same proxy (123 for example)
- * @method Client setKeepHeaders($value) Use your own custom headers (true/false)
- * @method Client setDeviceType($value) Set your requests to use mobile or desktop user agents (desktop/mobile)
- * @method Client setAutoparse($value) Activate auto parsing for select websites (true/false)
  */
 class Client
 {
@@ -33,44 +25,36 @@ class Client
      * ScraperAPI endpoint url
      */
     private const API = 'https://api.scraperapi.com';
-
-    /**
-     * ScraperAPI available query params
-     */
-    private const PARAMS_LIST = [
-        'country_code',
-        'render',
-        'premium',
-        'session_number',
-        'keep_headers',
-        'device_type',
-        'autoparse'
-    ];
-
     /**
      * ScraperAPI API key
      * @var string
      */
     private $apiKey;
-
+    /**
+     * ScraperAPI default request params
+     * @var array
+     */
+    private $defaultApiParams;
+    /**
+     * Default headers
+     * @var array
+     */
+    private $defaultHeaders;
     /**
      * If true, debug statement sent to the output. Useful for debugging async requests
      * @var bool
      */
     private $printDebugInfo;
-
     /**
      * If false, API key in debug statement will be replaced by 'API_KEY' string
      * @var bool
      */
     private $showApiKey;
-
     /**
      * Guzzle client
      * @var Guzzle
      */
     private $guzzle;
-
     /**
      * Optional PSR-3 logger for debug
      * @var LoggerInterface|null
@@ -81,19 +65,6 @@ class Client
      * @var mixed
      */
     private $logLevel;
-
-    /**
-     * ScraperAPI default request params
-     * @var array
-     */
-    private $params = [];
-
-    /**
-     * Default headers
-     * @var array
-     */
-    private $headers = [];
-
     /**
      * Total promises in a bunch (for debug statements)
      * @var int
@@ -105,13 +76,12 @@ class Client
      */
     private $fulfilledPromises = 0;
 
-    /** @var array */
-    private $paramsList;
-
     /**
      * ScraperAPI documentation - https://www.scraperapi.com/documentation/
      *
      * @param string $apiKey ScraperAPI API key
+     * @param array|null $defaultApiParams Default api parameters for requests
+     * @param array|null $defaultHeaders Default headers for requests
      * @param int $timeout Request timeout
      * @param int $tries Number of request attempts
      * @param int $delayMultiplier Delay multiplier before new request attempt in seconds
@@ -123,6 +93,8 @@ class Client
      */
     public function __construct(
         string          $apiKey,
+        ?array          $defaultApiParams = [],
+        ?array          $defaultHeaders = [],
         int             $timeout = 60,
         int             $tries = 3,
         int             $delayMultiplier = 1,
@@ -134,13 +106,25 @@ class Client
     )
     {
         $this->apiKey = $apiKey;
+        $this->defaultApiParams = $defaultApiParams ?? [];
+        $this->defaultHeaders = $defaultHeaders ?? [];
         $this->printDebugInfo = $printDebugInfo;
         $this->showApiKey = $showApiKey;
         $this->logger = $logger;
         $this->logLevel = $logLevel;
 
-        $this->paramsList = array_flip(static::PARAMS_LIST);
+        $this->guzzle = $this->createGuzzleClient($timeout, $tries, $delayMultiplier, $maxExceptionsLength);
+    }
 
+    /**
+     * @param int $timeout
+     * @param int $tries
+     * @param int $delayMultiplier
+     * @param int $maxExceptionsLength
+     * @return Guzzle
+     */
+    private function createGuzzleClient(int $timeout, int $tries, int $delayMultiplier, int $maxExceptionsLength): Guzzle
+    {
         $handlerStack = HandlerStack::create();
         $handlerStack->push(Middleware::retry(
             function (
@@ -176,112 +160,8 @@ class Client
         ));
         $handlerStack->push(Middleware::httpErrors(new BodySummarizer($maxExceptionsLength)), 'http_errors');
 
-        $this->guzzle = new Guzzle(['base_uri' => static::API, 'timeout' => $timeout, 'handler' => $handlerStack]);
+        return new Guzzle(['base_uri' => static::API, 'timeout' => $timeout, 'handler' => $handlerStack]);
     }
-
-
-    /**
-     * Caller for Client default query params setters
-     *
-     * @param string $name
-     * @param array $arguments
-     * @return $this
-     * @throws Exception
-     */
-    public function __call(string $name, array $arguments)
-    {
-
-        if (strpos($name, 'set') === 0) {
-            $this->setter($name, $arguments);
-            return $this;
-        }
-
-        throw new Exception("Unknown method '$name'.");
-    }
-
-    /**
-     * @param string $name
-     * @param array $arguments
-     */
-    private function setter(string $name, array $arguments): void
-    {
-        $paramName = $this->parseParamName($name);
-        if (array_key_exists($paramName, $this->paramsList)) {
-            $this->setParam($paramName, $arguments);
-        }
-    }
-
-    /**
-     * @param string $name
-     * @param array $arguments
-     */
-    private function setParam(string $name, array $arguments): void
-    {
-        $paramValue = $arguments[0] ?? null;
-        if ((!is_string($paramValue) && !is_bool($paramValue))) {
-            $paramValue = (string)$paramValue;
-        }
-        if (is_bool($paramValue)) {
-            $paramValue = $paramValue ? 'true' : 'false';
-        }
-        $this->params[$name] = $paramValue;
-    }
-
-    /**
-     * @param string $name
-     * @return string
-     */
-    private function parseParamName(string $name): string
-    {
-        $words = preg_split('/(?=[A-Z])/', substr($name, 3));
-        if (!$words) {
-            return '';
-        }
-
-        return (string)array_reduce($words, static function ($carry, $item) {
-            if ($item === '') {
-                return $carry;
-            }
-            return ($carry === '' || $carry === null) ? strtolower($item) : "{$carry}_" . strtolower($item);
-        });
-
-    }
-
-    /**
-     * Set Client default query params in one step from array, replacing existing ones
-     *
-     * @param array $params
-     * @return Client
-     */
-    public function setParams(array $params): Client
-    {
-        $this->params = $params;
-        return $this;
-    }
-
-    /**
-     * Add default header to Client
-     * @param string $header
-     * @param array|string $value
-     * @return $this
-     */
-    public function addHeader(string $header, $value): Client
-    {
-        $this->headers[$header] = $value;
-        return $this;
-    }
-
-    /**
-     * Set default Client headers in one step from array, replacing existing ones
-     * @param array $headers
-     * @return $this
-     */
-    public function setHeaders(array $headers): Client
-    {
-        $this->headers = $headers;
-        return $this;
-    }
-
 
     /**
      * Get info about ScraperAPI account
@@ -415,14 +295,14 @@ class Client
         ?array $json
     ): array
     {
-        $params = $this->params;
+        $params = $this->defaultApiParams;
         if (is_array($apiParams)) {
             foreach ($apiParams as $param => $value) {
                 $params[$param] = $value;
             }
         }
 
-        $resultHeaders = $this->headers;
+        $resultHeaders = $this->defaultHeaders;
         if (is_array($headers)) {
             foreach ($headers as $param => $value) {
                 $resultHeaders[$param] = $value;
