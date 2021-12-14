@@ -129,7 +129,14 @@ You can use three types of payload:
   or array of strings.
 * ```$json``` - for json. The passed associative ```array``` will be automatically converted to json data.
 
-By the way, it is convenient to pass the GraphQL payload through ```$formParams```:
+There are also short forms of methods for different types of payloads:
+```php
+$response = $sdk->postBody($url, $body, $apiParams, $headers);
+$response = $sdk->postForm($url, $formParams, $apiParams, $headers);
+$response = $sdk->postJson($url, $json, $apiParams, $headers);
+```
+
+By the way, it is convenient to pass the GraphQL payload through ```$json```:
 
 ```php
 $query = '
@@ -142,9 +149,9 @@ $query = '
       }
     }
 ';
-$formParams = ['query' => $query, 'variables' => ['episode' => 'JEDI']];
+$json = ['query' => $query, 'variables' => ['episode' => 'JEDI']];
 
-$response = $sdk->post('https://example.com', null, null, null, $formParams);
+$response = $sdk->postJson('https://example.com', $json);
 ```
 
 ### Asynchronous
@@ -155,7 +162,7 @@ Everything is similar to synchronous, but the work is going not through requests
 //Create array with promises
 $promises = [
     'first' => $sdk->getPromise('https://example.com', ['country_code' => 'us']),
-    'second' => $sdk->postPromise('https://example.com', null, null, 'payload'),
+    'second' => $sdk->postPromiseBody('https://example.com', 'payload'),
 ];
 //Asynchronous fulfillment of promises
 $responses = $sdk->resolvePromises($promises);

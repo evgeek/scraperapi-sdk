@@ -12,7 +12,6 @@ use GuzzleHttp\Promise\Utils;
 use GuzzleHttp\TransferStats;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Exception;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -218,6 +217,51 @@ class Client
     }
 
     /**
+     * POST request with a BODY of one of three types: raw string, fopen() resource or Psr\Http\Message\StreamInterface.
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param null $body
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function postBody(string $url, $body = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->post($url, $apiParams, $headers, $body);
+    }
+
+    /**
+     * POST request with FORM payload (Content-Type: application/x-www-form-urlencoded)
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param array|null $formParams
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function postForm(string $url, ?array $formParams = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->post($url, $apiParams, $headers, null, $formParams);
+    }
+
+    /**
+     * POST request with JSON payload (Content-Type: application/json)
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param array|null $json
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function postJson(string $url, ?array $json = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->post($url, $apiParams, $headers, null, null, $json);
+    }
+
+    /**
      * PUT request
      *
      * @param string $url
@@ -239,6 +283,52 @@ class Client
     ): ResponseInterface
     {
         return $this->sendRequest('PUT', $url, $apiParams, $headers, $body, $formParams, $json);
+    }
+
+
+    /**
+     * PUT request with a BODY of one of three types: raw string, fopen() resource or Psr\Http\Message\StreamInterface.
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param null $body
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function putBody(string $url, $body = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->put($url, $apiParams, $headers, $body);
+    }
+
+    /**
+     * PUT request with FORM payload (Content-Type: application/x-www-form-urlencoded)
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param array|null $formParams
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function putForm(string $url, ?array $formParams = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->put($url, $apiParams, $headers, null, $formParams);
+    }
+
+    /**
+     * PUT request with JSON payload (Content-Type: application/json)
+     *
+     * @param string $url
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @param array|null $json
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function putJson(string $url, ?array $json = null, ?array $apiParams = null, ?array $headers = null): ResponseInterface
+    {
+        return $this->put($url, $apiParams, $headers, null, null, $json);
     }
 
 
@@ -369,6 +459,48 @@ class Client
     }
 
     /**
+     * Create POST promise with a BODY of one of three types: raw string, fopen() resource or Psr\Http\Message\StreamInterface.
+     *
+     * @param string $url
+     * @param null $body
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function postPromiseBody(string $url, $body = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->postPromise($url, $apiParams, $headers, $body);
+    }
+
+    /**
+     * Create POST promise with FORM payload (Content-Type: application/x-www-form-urlencoded)
+     *
+     * @param string $url
+     * @param array|null $formParams
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function postPromiseForm(string $url, ?array $formParams = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->postPromise($url, $apiParams, $headers, null, $formParams);
+    }
+
+    /**
+     * Create POST promise with JSON payload (Content-Type: application/json)
+     *
+     * @param string $url
+     * @param array|null $json
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function postPromiseJson(string $url, ?array $json = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->postPromise($url, $apiParams, $headers, null, null, $json);
+    }
+
+    /**
      * Create PUT promise
      *
      * @param string $url
@@ -389,6 +521,48 @@ class Client
     ): PromiseInterface
     {
         return $this->createPromise('PUT', $url, $apiParams, $headers, $body, $formParams, $json);
+    }
+
+    /**
+     * Create PUT promise with a BODY of one of three types: raw string, fopen() resource or Psr\Http\Message\StreamInterface.
+     *
+     * @param string $url
+     * @param null $body
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function putPromiseBody(string $url, $body = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->putPromise($url, $apiParams, $headers, $body);
+    }
+
+    /**
+     * Create PUT promise with FORM payload (Content-Type: application/x-www-form-urlencoded)
+     *
+     * @param string $url
+     * @param array|null $formParams
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function putPromiseForm(string $url, ?array $formParams = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->putPromise($url, $apiParams, $headers, null, $formParams);
+    }
+
+    /**
+     * Create PUT promise with JSON payload (Content-Type: application/json)
+     *
+     * @param string $url
+     * @param array|null $json
+     * @param array|null $apiParams
+     * @param array|null $headers
+     * @return PromiseInterface
+     */
+    public function putPromiseJson(string $url, ?array $json = null, ?array $apiParams = null, ?array $headers = null): PromiseInterface
+    {
+        return $this->putPromise($url, $apiParams, $headers, null, null, $json);
     }
 
     /**
