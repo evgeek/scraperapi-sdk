@@ -22,7 +22,7 @@ use Evgeek\Scraperapi\Client;
 require '/path/to/you/vendor/autoload.php';
 
 //Create and configure a new SDK client
-$sdk = new Client('YOU_TOKEN');
+$sdk = new Client('YOUR_TOKEN');
 
 //Send request
 $response = $sdk->get('https://example.com');
